@@ -16,7 +16,7 @@
    ============================================================ */
 
 window.GUBCC_SUPABASE_CONFIG = {
-  projectUrl: "https://new-nine-omega-70.vercel.app/",
+  projectUrl: "",
   anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVweWVmYWp1ZWV4cmVvaG9vc3NuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2MjQyNjksImV4cCI6MjEwMzIwMDI2OX0.PKwGz3xgh5hw5aEh_vb1226GfwaK--RihPYhUnG3riI"
   
 };
