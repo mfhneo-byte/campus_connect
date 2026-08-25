@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Transport — GUB Campus Connect</title>
+  <meta name="description" content="Green University of Bangladesh bus routes, daily trip schedules and transport notices.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230E4D34'/%3E%3Ccircle cx='9' cy='23' r='3.4' fill='%23fff'/%3E%3Ccircle cx='16' cy='16' r='3.4' fill='%23fff'/%3E%3Ccircle cx='23' cy='9' r='3.4' fill='%23F2B234'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <div class="topstrip">
+    <div class="wrap">
+      <span><strong>Green University of Bangladesh</strong> &middot; Purbachal American City, Kanchan, Rupganj</span>
+      <label class="manage-toggle" title="Show the add and delete controls used for the CRUD demo">
+        <input type="checkbox" id="manage-toggle">
+        <span class="switch"></span>
+        <span>Manage mode</span>
+      </label>
+    </div>
+  </div>
+
+  <header class="masthead">
+    <div class="wrap">
+      <a class="wordmark" href="index.html">
+        <span class="mark" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+            <path d="M4 18 L18 4" stroke="#F2B234" stroke-width="2.5" stroke-linecap="round"/>
+            <circle cx="4" cy="18" r="3" fill="#fff"/>
+            <circle cx="11" cy="11" r="3" fill="#fff"/>
+            <circle cx="18" cy="4" r="3" fill="#fff"/>
+          </svg>
+        </span>
+        <span>
+          <span class="name">Campus Connect</span>
+          <span class="sub">GUB student services portal</span>
+        </span>
+      </a>
+      <div class="nav-cluster">
+        <nav class="nav" aria-label="Main navigation">
+          <a href="index.html">Home</a>
+          <a href="transport.html" class="active">Transport</a>
+          <a href="clubs.html">Clubs</a>
+          <a href="events.html">Events</a>
+        </nav>
+        <div class="auth-area" id="auth-area"></div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="wrap">
+        <p class="eyebrow">Transportation services</p>
+        <h1>Bus routes &amp; daily schedule</h1>
+        <p class="lead">All university buses run between Dhaka-area pick-up points and the Purbachal campus.
+          Check your line, today's trips, and the latest transport notices below.</p>
+      </div>
+    </section>
+
+    <!-- Routes -->
+    <section class="section" id="routes">
+      <div class="wrap">
+        <div class="section-head">
+          <h2>Bus routes</h2>
+          <span class="hint">Stops are listed in boarding order towards campus</span>
+        </div>
+
+        <div class="admin-panel admin-only">
+          <p class="ap-title">Manage · Add a bus route</p>
+          <form id="route-form">
+            <div class="form-grid">
+              <div class="field"><label for="route-name">Route name</label>
+                <input id="route-name" type="text" placeholder="e.g. Gazipur Line" required></div>
+              <div class="field"><label for="route-start">Starting point</label>
+                <input id="route-start" type="text" placeholder="e.g. Gazipur Chowrasta" required></div>
+              <div class="field"><label for="route-end">End point</label>
+                <input id="route-end" type="text" value="GUB Purbachal Campus" required></div>
+              <div class="field full"><label for="route-stops">Stops (comma-separated, in order)</label>
+                <input id="route-stops" type="text" placeholder="Gazipur Chowrasta, Tongi, Airport, Kanchan Bridge, Campus" required></div>
+            </div>
+            <div class="form-actions">
+              <button class="btn primary" type="submit">Add route</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="grid cols-2" id="route-grid"></div>
+      </div>
+    </section>
+
+    <!-- Schedule -->
+    <section class="section" id="schedule">
+      <div class="wrap">
+        <div class="section-head">
+          <h2>Daily trip schedule</h2>
+          <span class="hint">Times shown in 12-hour format</span>
+        </div>
+
+        <div class="filter-row">
+          <label for="sched-filter">Show route:</label>
+          <select id="sched-filter"></select>
+        </div>
+
+        <div class="admin-panel admin-only">
+          <p class="ap-title">Manage · Add a trip</p>
+          <form id="sched-form">
+            <div class="form-grid">
+              <div class="field"><label for="sched-route">Route</label>
+                <select id="sched-route" required></select></div>
+              <div class="field"><label for="sched-bus">Bus no.</label>
+                <input id="sched-bus" type="text" placeholder="GUB-12" required></div>
+              <div class="field"><label for="sched-dir">Direction</label>
+                <select id="sched-dir">
+                  <option>To Campus</option>
+                  <option>From Campus</option>
+                </select></div>
+              <div class="field"><label for="sched-dep">Departs</label>
+                <input id="sched-dep" type="time" required></div>
+              <div class="field"><label for="sched-arr">Arrives</label>
+                <input id="sched-arr" type="time" required></div>
+              <div class="field"><label for="sched-shift">Shift</label>
+                <select id="sched-shift">
+                  <option>Morning</option>
+                  <option>Afternoon</option>
+                  <option>Evening</option>
+                </select></div>
+            </div>
+            <div class="form-actions">
+              <button class="btn primary" type="submit">Add trip</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="table-scroll">
+          <table class="data">
+            <thead>
+              <tr>
+                <th>Route</th><th>Line</th><th>Bus</th><th>Departs</th><th>Arrives</th>
+                <th>Direction</th><th>Shift</th><th class="admin-only">Manage</th>
+              </tr>
+            </thead>
+            <tbody id="sched-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Notices -->
+    <section class="section" id="notices">
+      <div class="wrap">
+        <div class="section-head">
+          <h2>Transport notices</h2>
+          <span class="hint">Official announcements from the Transport Office</span>
+        </div>
+
+        <div class="admin-panel admin-only">
+          <p class="ap-title">Manage · Publish a notice</p>
+          <form id="notice-form">
+            <div class="form-grid">
+              <div class="field"><label for="notice-title">Title</label>
+                <input id="notice-title" type="text" placeholder="e.g. Eid holiday bus schedule" required></div>
+              <div class="field"><label for="notice-date">Date</label>
+                <input id="notice-date" type="date"></div>
+              <div class="field full"><label for="notice-body">Details</label>
+                <textarea id="notice-body" placeholder="Write the notice text…" required></textarea></div>
+            </div>
+            <div class="form-actions">
+              <button class="btn primary" type="submit">Publish notice</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="notice-list" id="notice-list"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <span>&copy; <span id="year">2026</span> GUB Campus Connect &middot; Integrated System Design Lab project</span>
+      <span>Demo data lives in your browser &middot;
+        <button class="reset" id="reset-data" type="button">Reset demo data</button></span>
+    </div>
+  </footer>
+
+  <div id="toast-zone" aria-live="polite"></div>
+
+  <!-- Sign up modal -->
+  <div class="modal-backdrop" id="signup-modal" role="dialog" aria-modal="true" aria-labelledby="signup-title">
+    <div class="modal">
+      <h3 id="signup-title">Create your account</h3>
+      <p class="m-hint">Demo account for this prototype — please don't reuse a real password.</p>
+      <form id="signup-form">
+        <div class="form-grid">
+          <div class="field full"><label for="signup-name">Full name</label>
+            <input id="signup-name" type="text" placeholder="e.g. Farhana Akter" required></div>
+          <div class="field"><label for="signup-email">Email</label>
+            <input id="signup-email" type="email" placeholder="name@student.green.edu.bd" required></div>
+          <div class="field"><label for="signup-sid">Student ID (9 digits)</label>
+            <input id="signup-sid" type="text" inputmode="numeric" placeholder="e.g. 231002015" required></div>
+          <div class="field"><label for="signup-mobile">Mobile number</label>
+            <input id="signup-mobile" type="tel" placeholder="e.g. 01712345678" required></div>
+          <div class="field"><label for="signup-password">Password</label>
+            <input id="signup-password" type="password" placeholder="At least 6 characters" required></div>
+        </div>
+        <div class="form-actions">
+          <button class="btn primary" type="submit">Continue</button>
+          <button class="btn ghost" type="button" id="signup-cancel">Cancel</button>
+        </div>
+        <p class="m-foot">Already have an account? <a id="signup-goto-login">Log in</a></p>
+      </form>
+    </div>
+  </div>
+
+
+  <!-- OTP verification modal -->
+  <div class="modal-backdrop" id="otp-modal" role="dialog" aria-modal="true" aria-labelledby="otp-title">
+    <div class="modal">
+      <h3 id="otp-title">Verify your email</h3>
+      <p class="m-sub" id="otp-target">We've sent a 6-digit code to your email.</p>
+      <div class="otp-demo-code" id="otp-demo-box">
+        <strong>Your code:</strong> <span class="code" id="otp-demo-value">000000</span>
+        <br>Shown on screen because real email delivery isn't configured (see js/email-config.js to enable it).
+      </div>
+      <form id="otp-form">
+        <div class="form-grid">
+          <div class="field full"><label for="otp-code">6-digit code</label>
+            <input id="otp-code" type="text" inputmode="numeric" maxlength="6" placeholder="000000" autocomplete="one-time-code" required></div>
+        </div>
+        <p class="otp-timer" id="otp-timer">Code expires in 5:00</p>
+        <div class="form-actions">
+          <button class="btn primary" type="submit">Verify &amp; create account</button>
+          <button class="btn ghost" type="button" id="otp-cancel">Cancel</button>
+        </div>
+        <p class="m-foot"><a id="otp-resend">Resend code</a></p>
+      </form>
+    </div>
+  </div>
+
+  <!-- Log in modal -->
+  <div class="modal-backdrop" id="login-modal" role="dialog" aria-modal="true" aria-labelledby="login-title">
+    <div class="modal">
+      <h3 id="login-title">Log in</h3>
+      <p class="m-hint">Demo login — email: demo@student.green.edu.bd &middot; password: demo1234</p>
+      <form id="login-form">
+        <div class="form-grid">
+          <div class="field full"><label for="login-email">Email</label>
+            <input id="login-email" type="email" placeholder="name@student.green.edu.bd" required></div>
+          <div class="field full"><label for="login-password">Password</label>
+            <input id="login-password" type="password" placeholder="Your password" required></div>
+        </div>
+        <div class="form-actions">
+          <button class="btn primary" type="submit">Log in</button>
+          <button class="btn ghost" type="button" id="login-cancel">Cancel</button>
+        </div>
+        <p class="m-foot">New here? <a id="login-goto-signup">Create an account</a></p>
+      </form>
+    </div>
+  </div>
+
+  <script src="js/data.js"></script>
+  <script src="js/main.js"></script>
+  <script src="js/supabase-config.js"></script>
+  <script src="js/supabase-client.js"></script>
+  <script src="js/email-config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/transport.js"></script>
+</body>
+</html>
