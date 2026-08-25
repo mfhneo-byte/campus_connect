@@ -15,10 +15,11 @@
    `supabase`, and the connected client is deliberately called
    `sbClient` everywhere in this project.
    ============================================================ */
-
+const SUPABASE_URL = "https://hwhijhzsburajhcdejjb.supabase.co";
+const SUPABASE_KEY = "sb_publishable_BwSWuRmgc1ua9N5i5rZvbw_LwtmPvMd";
 var sbClient = supabase.createClient(
-    "https://hwhijhzsburajhcdejjb.supabase.co",
-    "sb_publishable_BwSWuRmgc1ua9N5i5rZvbw_LwtmPvMd"
+    SUPABASE_URL,
+    SUPABASE_KEY
 );;
 var sbReady = null; // Promise, resolves once connected (or stays unresolved if not configured)
 
