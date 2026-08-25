@@ -16,7 +16,10 @@
    `sbClient` everywhere in this project.
    ============================================================ */
 
-var sbClient = null;
+var sbClient = supabase.createClient(
+    "https://hwhijhzsburajhcdejjb.supabase.co",
+    "sb_publishable_BwSWuRmgc1ua9N5i5rZvbw_LwtmPvMd"
+);;
 var sbReady = null; // Promise, resolves once connected (or stays unresolved if not configured)
 
 function isSupabaseConfigured() {
