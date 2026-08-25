@@ -1,23 +1,40 @@
 /* ============================================================
-   GUB Campus Connect — account system (Supabase Enabled)
+   GUB Campus Connect — account system (demo only)
+
+   Sign-up now runs through a one-time-passcode (OTP) step before the
+   account is actually created, and a successful verification logs the
+   person straight into their new account and sends them to the
+   dashboard. Logging in starts a session in sessionStorage — not
+   localStorage — on purpose: it clears when the browser tab/window is
+   closed, so a new visit always needs a fresh login, while the account
+   itself is remembered permanently.
+
+   OTP delivery is SIMULATED: there's no backend in this project to send
+   real email, so the code is shown right in the verification modal,
+   clearly labelled as a demo. To send a real email instead, replace the
+   body of deliverOTP() below with a call to an email API that works
+   from client-side JS with no backend — e.g. EmailJS (see README) —
+   and nothing else in this file needs to change.
+
+   Passwords are stored in plain text alongside everything else. That's
+   fine for demo data typed into a school project, but it is not real
+   security — never reuse a real password here.
    ============================================================ */
 
-import { createClient } from '@supabase/supabase-js';
-
-// 1. Initialize Supabase Client
-const SUPABASE_URL = "https://hwhijhzsburajhcdejjb.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVweWVmYWp1ZWV4cmVvaG9vc3NuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2MjQyNjksImV4cCI6MjEwMzIwMDI2OX0.PKwGz3xgh5hw5aEh_vb1226GfwaK--RihPYhUnG3riI";
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-var PENDING_SIGNUP_KEY = "gubcc_pending_signup"; // sessionStorage
+var SESSION_KEY = "gubcc_session";
+var PENDING_SIGNUP_KEY = "gubcc_pending_signup"; // sessionStorage — cleared on tab close
 var OTP_TTL_MS = 5 * 60 * 1000;
 var OTP_MAX_ATTEMPTS = 5;
 
-var pendingAction = null;
+var pendingAction = null; // callback to run automatically right after a successful login/verification
 var otpTimerHandle = null;
 
-/* ---------- OTP Delivery Setup ---------- */
-var emailReady = null;
+/* ---------- OTP delivery: real email (EmailJS) or on-screen demo ----------
+   If js/email-config.js has all three values filled in, the EmailJS SDK is
+   loaded from its CDN and codes are genuinely emailed. Otherwise — or if
+   loading/sending fails at runtime — the code is shown in the modal so the
+   flow always completes. */
+var emailReady = null; // Promise when real delivery is configured, else null
 
 function initEmailDelivery() {
   var cfg = window.GUBCC_EMAIL_CONFIG || {};
@@ -47,31 +64,33 @@ function sendOtpEmail(toEmail, toName, code) {
   });
 }
 
-/* ---------- Supabase Auth Helpers ---------- */
-
-/**
- * Fetch active Supabase user session asynchronously
- */
-async function getCurrentUser() {
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
-    return user;
-  } catch (e) {
-    return null;
+function currentUser() {
+  var db = dbLoad();
+  var uid = null;
+  try { uid = sessionStorage.getItem(SESSION_KEY); } catch (e) { /* ignore */ }
+  if (!uid) { return null; }
+  for (var i = 0; i < db.users.length; i++) {
+    if (db.users[i].id === uid) { return db.users[i]; }
   }
+  return null;
 }
 
-/**
- * Render user interface status bar based on active session
- */
-async function renderAuthArea() {
+/* Run fn immediately if someone is logged in; otherwise remember fn,
+   open the login modal, and run fn automatically right after they log in
+   (including if they detour through Sign up + OTP verification first). */
+function requireLogin(fn) {
+  if (currentUser()) { fn(); return; }
+  pendingAction = fn;
+  toast("Log in first to use this — it only takes a moment.");
+  openModal("login-modal");
+}
+
+function renderAuthArea() {
   var area = document.getElementById("auth-area");
   if (!area) { return; }
-  
-  var user = await getCurrentUser();
+  var user = currentUser();
   if (user) {
-    var fullName = user.user_metadata?.full_name || user.email;
-    var firstName = String(fullName).split(" ")[0];
+    var firstName = String(user.name).split(" ")[0];
     area.innerHTML =
       '<a class="auth-user" href="dashboard.html">Hi, ' + esc(firstName) + "</a>" +
       '<button class="btn ghost small" id="nav-logout" type="button">Log out</button>';
@@ -82,15 +101,7 @@ async function renderAuthArea() {
   }
 }
 
-async function requireLogin(fn) {
-  var user = await getCurrentUser();
-  if (user) { fn(); return; }
-  pendingAction = fn;
-  toast("Log in first to use this — it only takes a moment.");
-  openModal("login-modal");
-}
-
-/* ---------- OTP Utilities ---------- */
+/* ---------- OTP: generate + deliver + countdown ---------- */
 
 function generateOTP() {
   return String(Math.floor(100000 + Math.random() * 900000));
@@ -172,18 +183,16 @@ function readPendingSignup() {
   } catch (e) { return null; }
 }
 
-/* ---------- Event Listeners & Async Handlers ---------- */
-
 document.addEventListener("DOMContentLoaded", function () {
   initEmailDelivery();
   renderAuthArea();
 
-  document.addEventListener("click", async function (ev) {
+  document.addEventListener("click", function (ev) {
     var t = ev.target;
     if (t.id === "nav-login") { openModal("login-modal"); }
     if (t.id === "nav-signup") { openModal("signup-modal"); }
     if (t.id === "nav-logout") {
-      await supabase.auth.signOut();
+      try { sessionStorage.removeItem(SESSION_KEY); } catch (e) { /* ignore */ }
       renderAuthArea();
       toast("You're logged out.");
     }
@@ -210,11 +219,12 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   });
 
-  /* ---------- Sign up validation ---------- */
+  /* ---------- Sign up: validate, then move to OTP instead of creating the account yet ---------- */
   var signupForm = document.getElementById("signup-form");
   if (signupForm) {
     signupForm.addEventListener("submit", function (ev) {
       ev.preventDefault();
+      var db = dbLoad();
       var name = document.getElementById("signup-name").value.trim();
       var email = document.getElementById("signup-email").value.trim().toLowerCase();
       var sid = document.getElementById("signup-sid").value.trim();
@@ -237,6 +247,12 @@ document.addEventListener("DOMContentLoaded", function () {
         toast("Password must be at least 6 characters.", true);
         return;
       }
+      for (var i = 0; i < db.users.length; i++) {
+        if (db.users[i].email === email) {
+          toast("An account with that email already exists — log in instead.", true);
+          return;
+        }
+      }
 
       signupForm.reset();
       closeModal("signup-modal");
@@ -244,10 +260,10 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  /* ---------- OTP verification: Register & Insert into Supabase Database ---------- */
+  /* ---------- OTP verify: on success, actually create the account and log in ---------- */
   var otpForm = document.getElementById("otp-form");
   if (otpForm) {
-    otpForm.addEventListener("submit", async function (ev) {
+    otpForm.addEventListener("submit", function (ev) {
       ev.preventDefault();
       var pending = readPendingSignup();
       if (!pending) {
@@ -276,50 +292,33 @@ document.addEventListener("DOMContentLoaded", function () {
         return;
       }
 
-      // 1. Sign up user via Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: pending.email,
-        password: pending.password,
-        options: {
-          data: {
-            full_name: pending.name,
-            student_id: pending.studentId,
-            mobile: pending.mobile
-          }
-        }
-      });
-
-      if (authError) {
-        toast(authError.message, true);
-        return;
-      }
-
-      // 2. Insert user record directly into Supabase 'users' table
-      const user = authData.user;
-      if (user) {
-        const { error: dbError } = await supabase.from('users').insert([
-          {
-            id: user.id,
-            email: pending.email,
-            full_name: pending.name,
-            student_id: pending.studentId,
-            mobile: pending.mobile,
-            role: 'student'
-          }
-        ]);
-
-        if (dbError) {
-          console.error("Database insert error:", dbError.message);
+      // Correct code — create the account now (guard against a duplicate
+      // signed up from another tab while this code was pending).
+      var db = dbLoad();
+      for (var i = 0; i < db.users.length; i++) {
+        if (db.users[i].email === pending.email) {
+          toast("That email was just registered elsewhere — please log in instead.", true);
+          stopOtpCountdown();
+          try { sessionStorage.removeItem(PENDING_SIGNUP_KEY); } catch (e) { /* ignore */ }
+          closeModal("otp-modal"); openModal("login-modal");
+          return;
         }
       }
-
+      var rec = {
+        id: nextId("U", db.users, 3), name: pending.name, email: pending.email,
+        studentId: pending.studentId, mobile: pending.mobile, password: pending.password,
+        joined: todayISO()
+      };
+      db.users.push(rec);
+      dbSave(db);
       stopOtpCountdown();
       try { sessionStorage.removeItem(PENDING_SIGNUP_KEY); } catch (e) { /* ignore */ }
+      try { sessionStorage.setItem(SESSION_KEY, rec.id); } catch (e) { /* ignore */ }
 
       otpForm.reset();
       closeModal("otp-modal");
-      await renderAuthArea();
-      toast("Verified — welcome, " + String(pending.name).split(" ")[0] + "!");
+      renderAuthArea();
+      toast("Verified — welcome, " + String(rec.name).split(" ")[0] + "!");
 
       if (pendingAction) {
         var fn = pendingAction;
@@ -330,6 +329,7 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     });
 
+    // digits-only, 6-char cap, for a nicer typing feel
     var otpCodeInput = document.getElementById("otp-code");
     if (otpCodeInput) {
       otpCodeInput.addEventListener("input", function () {
@@ -338,30 +338,28 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
-  /* ---------- Log in via Supabase Auth ---------- */
+  /* ---------- Log in: unchanged, no OTP for existing accounts ---------- */
   var loginForm = document.getElementById("login-form");
   if (loginForm) {
-    loginForm.addEventListener("submit", async function (ev) {
+    loginForm.addEventListener("submit", function (ev) {
       ev.preventDefault();
+      var db = dbLoad();
       var email = document.getElementById("login-email").value.trim().toLowerCase();
       var password = document.getElementById("login-password").value;
 
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: email,
-        password: password
-      });
-
-      if (error) {
+      var match = null;
+      for (var i = 0; i < db.users.length; i++) {
+        if (db.users[i].email === email && db.users[i].password === password) { match = db.users[i]; break; }
+      }
+      if (!match) {
         toast("Email or password is incorrect.", true);
         return;
       }
-
+      try { sessionStorage.setItem(SESSION_KEY, match.id); } catch (e) { /* ignore */ }
       loginForm.reset();
       closeModal("login-modal");
-      await renderAuthArea();
-      
-      const userName = data.user.user_metadata?.full_name || email;
-      toast("Welcome back, " + String(userName).split(" ")[0] + ".");
+      renderAuthArea();
+      toast("Welcome back, " + String(match.name).split(" ")[0] + ".");
 
       if (pendingAction) {
         var fn = pendingAction;
